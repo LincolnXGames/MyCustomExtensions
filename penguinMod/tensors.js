@@ -46,7 +46,13 @@
   
     return shape;
   }
-  
+
+  function getTensorRank(tensor) {
+    if (tensor instanceof jwArray.Type) tensor = tensor.array;
+    if (!Array.isArray(tensor)) return 0;
+    return 1 + getTensorRank(tensor[0]);
+  }
+
   class Extension {
     constructor() {
       if (!vm.jwArray) vm.extensionManager.loadExtensionIdSync('jwArray')
@@ -88,6 +94,14 @@
             },
             forceOutputType: "Array",
           },
+          {
+            opcode: 'tensorRank',
+            text: 'rank of tensor [TEN]',
+            blockType: Scratch.BlockType.REPORTER,
+            arguments: {
+              TEN: jwArray.Argument
+            },
+          },
         ],
       };
     }
@@ -104,6 +118,11 @@
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
       return new jwArray.Type(getTensorShape(TEN.array));
+    }
+    tensorRank({ TEN }) {
+      TEN = jwArray.Type.toArray(TEN);
+      if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return '';
+      return getTensorRank(TEN.array);
     }
   }
   
