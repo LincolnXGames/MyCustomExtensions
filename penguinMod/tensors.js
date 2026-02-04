@@ -75,11 +75,23 @@
           },
           {
             opcode: 'blankSize',
-            text: 'blank tensor of dimensions [DIM]',
+            text: 'blank tensor of shape [SHA]',
             blockType: Scratch.BlockType.REPORTER,
             blockShape: Scratch.BlockShape.SQUARE,
             arguments: {
-              DIM: jwArray.Argument
+              SHA: jwArray.Argument
+            },
+            forceOutputType: "Array",
+          },
+          '---',
+          {
+            opcode: 'tensorReshape',
+            text: '(nim) reshape tensor [TEN] to shape [SHA]',
+            blockType: Scratch.BlockType.REPORTER,
+            blockShape: Scratch.BlockShape.SQUARE,
+            arguments: {
+              TEN: jwArray.Argument,
+              SHA: jwArray.Argument
             },
             forceOutputType: "Array",
           },
@@ -109,10 +121,10 @@
     blank() {
       return new jwArray.Type([], true);
     }
-    blankSize({ DIM }) {
-      DIM = jwArray.Type.toArray(DIM);
-      if (DIM.array == null || (Array.isArray(DIM.array) && DIM.array.length === 0)) return new jwArray.Type([], true);
-      return new jwArray.Type(createTensor(DIM.array));
+    blankSize({ SHA }) {
+      SHA = jwArray.Type.toArray(SHA);
+      if (SHA.array == null || (Array.isArray(SHA.array) && SHA.array.length === 0)) return new jwArray.Type([], true);
+      return new jwArray.Type(createTensor(SHA.array));
     }
     tensorShape({ TEN }) {
       TEN = jwArray.Type.toArray(TEN);
