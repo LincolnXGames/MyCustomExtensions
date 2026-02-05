@@ -53,6 +53,74 @@
     return 1 + getTensorRank(tensor[0]);
   }
 
+  function reshapeTensor(tensor, shape) {
+    const flat = tensor.flat(Infinity).array;
+
+    let size = 1;
+    for (let i = 0; i < shape.length; i++) size *= shape[i];
+
+    flat.length = size; // truncates or extends with empty slots
+    for (let i = 0; i < size; i++) if (flat[i] === undefined) flat[i] = null;
+
+    let idx = 0;
+    const build = d => {
+    const len = shape[d], arr = new Array(len);
+    if (d === shape.length - 1) {
+        for (let i = 0; i < len; i++) arr[i] = flat[idx++];
+      } else {
+        for (let i = 0; i < len; i++) arr[i] = build(d + 1);
+      }
+      return arr;
+    };
+
+    return build(0);
+  }
+
+  function fillTensor(tensor, val) {
+    if (!Array.isArray(tensor) && !(tensor instanceof jwArray.Type)) return val;
+    if (tensor instanceof jwArray.Type) tensor = tensor.array;
+    return tensor.map(el => fillTensor(el instanceof jwArray.Type ? el.array : el, val));
+  }
+
+  function getTensorPath(tensor, path) {
+    let current = tensor;
+  
+    for (let i = 0, len = path.length; i < len; i++) {
+      if (current instanceof jwArray.Type) {
+        current = current.array;
+      } else if (!Array.isArray(current)) {
+        return '';
+      }
+      current = current[path[i]-1];
+      if (current === undefined) return '';
+    }
+  
+    return current instanceof jwArray.Type ? current.array : current;
+  }
+
+  function setTensorPath(tensor, path, value) {
+    function f(a, d) {
+      if (!Array.isArray(a)) return;
+      const i = path[d] - 1;
+      if (i < 0 || i >= a.length) return;
+  
+      const c = a.slice();
+      if (d === path.length - 1) {
+        c[i] = value;
+      } else {
+        const n = c[i];
+        const r = f(n instanceof jwArray.Type ? n.array : n, d + 1);
+        if (r === undefined) return;
+        c[i] = r;
+      }
+      return c;
+    }
+  
+    const out = f(tensor.array, 0);
+    return out === undefined ? '' : new jwArray.Type(out);
+  }
+
+
   class Extension {
     constructor() {
       if (!vm.jwArray) vm.extensionManager.loadExtensionIdSync('jwArray')
@@ -79,23 +147,21 @@
             blockType: Scratch.BlockType.REPORTER,
             blockShape: Scratch.BlockShape.SQUARE,
             arguments: {
-              SHA: jwArray.Argument
+              SHA: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE},
             },
             forceOutputType: "Array",
           },
           '---',
           {
-            opcode: 'tensorReshape',
-            text: '(nim) reshape tensor [TEN] to shape [SHA]',
+            opcode: 'tensorGetPath',
+            text: 'get path [PAT] in tensor [TEN]',
             blockType: Scratch.BlockType.REPORTER,
-            blockShape: Scratch.BlockShape.SQUARE,
+            allowDropAnywhere: true,
             arguments: {
-              TEN: jwArray.Argument,
-              SHA: jwArray.Argument
+              PAT: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE},
+              TEN: jwArray.Argument
             },
-            forceOutputType: "Array",
           },
-          '---',
           {
             opcode: 'tensorShape',
             text: 'shape of tensor [TEN]',
@@ -114,6 +180,41 @@
               TEN: jwArray.Argument
             },
           },
+          '---',
+          {
+            opcode: 'tensorSetPath',
+            text: 'set path [PAT] in tensor [TEN] to [VAL]',
+            blockType: Scratch.BlockType.REPORTER,
+            blockShape: Scratch.BlockShape.SQUARE,
+            allowDropAnywhere: true,
+            arguments: {
+              PAT: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE},
+              TEN: jwArray.Argument,
+              VAL: {type: Scratch.ArgumentType.STRING}
+            },
+          },
+          {
+            opcode: 'tensorReshape',
+            text: 'reshape tensor [TEN] to shape [SHA]',
+            blockType: Scratch.BlockType.REPORTER,
+            blockShape: Scratch.BlockShape.SQUARE,
+            arguments: {
+              TEN: jwArray.Argument,
+              SHA: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE},
+            },
+            forceOutputType: "Array",
+          },
+          {
+            opcode: 'tensorFill',
+            text: 'fill tensor [TEN] with [VAL]',
+            blockType: Scratch.BlockType.REPORTER,
+            blockShape: Scratch.BlockShape.SQUARE,
+            arguments: {
+              TEN: jwArray.Argument,
+              VAL: {type: Scratch.ArgumentType.STRING}
+            },
+            forceOutputType: "Array",
+          },
         ],
       };
     }
@@ -126,6 +227,14 @@
       if (SHA.array == null || (Array.isArray(SHA.array) && SHA.array.length === 0)) return new jwArray.Type([], true);
       return new jwArray.Type(createTensor(SHA.array));
     }
+
+    tensorGetPath({ PAT, TEN }) {
+      TEN = jwArray.Type.toArray(TEN);
+      PAT = jwArray.Type.toArray(PAT);
+      if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
+      TEN = getTensorPath(TEN, PAT.array)
+      return Array.isArray(TEN) ? new jwArray.Type(TEN) : TEN
+    }
     tensorShape({ TEN }) {
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
@@ -135,6 +244,24 @@
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return '';
       return getTensorRank(TEN.array);
+    }
+
+    tensorSetPath({ PAT, TEN, VAL }) {
+      TEN = jwArray.Type.toArray(TEN);
+      PAT = jwArray.Type.toArray(PAT);
+      if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
+      return setTensorPath(TEN, PAT.array, VAL)
+    }
+    tensorReshape({ TEN, SHA }) {
+      TEN = jwArray.Type.toArray(TEN);
+      SHA = jwArray.Type.toArray(SHA);
+      if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
+      return new jwArray.Type(reshapeTensor(TEN, SHA.array));
+    }
+    tensorFill({ TEN, VAL }) {
+      TEN = jwArray.Type.toArray(TEN);
+      if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
+      return new jwArray.Type(fillTensor(TEN, VAL));
     }
   }
   
