@@ -120,6 +120,83 @@
     return out === undefined ? '' : new jwArray.Type(out);
   }
 
+  function validTensor(arr) {
+    const u = x => { while (x instanceof jwArray.Type) x = x.array; return x; };
+  
+    let level = u(arr);
+    if (!Array.isArray(level)) return false;
+  
+    while (true) {
+      const len = level.length;
+      if (len === 0) return false;
+  
+      let first = u(level[0]);
+      const firstIsArray = Array.isArray(first);
+      const expectedLen = firstIsArray ? first.length : 0;
+  
+      for (let i = 1; i < len; i++) {
+        let item = u(level[i]);
+        const isArr = Array.isArray(item);
+        if (isArr !== firstIsArray) return false;
+        if (isArr && item.length !== expectedLen) return false;
+      }
+  
+      if (!firstIsArray) return true;
+      level = first;
+    }
+  }
+
+  function countScalars(t) {
+    const u = x => { while (x instanceof jwArray.Type) x = x.array; return x; };
+  
+    function f(n) {
+      n = u(n);
+      if (!Array.isArray(n)) return 1;
+  
+      let total = 0;
+      for (let i = 0, len = n.length; i < len; i++) {
+        total += f(n[i]);
+      }
+      return total;
+    }
+  
+    return f(t);
+  }
+
+  function findTensorPath(tensor, target) {
+    const stack = [{ node: tensor, path: [] }];
+  
+    while (stack.length) {
+      const { node, path } = stack.pop();
+      let current = node;
+  
+      while (current instanceof jwArray.Type) current = current.array;
+  
+      if (Array.isArray(current)) {
+        for (let i = current.length - 1; i >= 0; i--) {
+          stack.push({ node: current[i], path: [...path, i] });
+        }
+      } else {
+        let val = node;
+        while (val instanceof jwArray.Type) val = val.array;
+        if (val === target) return path.map(el => el + 1);
+      }
+    }
+  
+    return [];
+  }
+
+  function tensorContains(tensor, target) {
+    if (tensor instanceof jwArray.Type) tensor = tensor.array;
+    if (Array.isArray(tensor)) {
+      for (let i = 0; i < tensor.length; i++) {
+        if (tensorContains(tensor[i], target)) return true;
+      }
+      return false;
+    }
+    return tensor === target;
+  }
+
 
   class Extension {
     constructor() {
@@ -163,6 +240,27 @@
             },
           },
           {
+            opcode: 'tensorFindPath',
+            text: 'path of [VAL] in tensor [TEN]',
+            blockType: Scratch.BlockType.REPORTER,
+            blockShape: Scratch.BlockShape.SQUARE,
+            allowDropAnywhere: true,
+            arguments: {
+              VAL: {type: Scratch.ArgumentType.STRING, exemptFromNormalization: true},
+              TEN: jwArray.Argument
+            },
+            forceOutputType: "Array",
+          },
+          {
+            opcode: 'tensorHas',
+            text: 'tensor [TEN] has [VAL]',
+            blockType: Scratch.BlockType.BOOLEAN,
+            arguments: {
+              TEN: jwArray.Argument,
+              VAL: {type: Scratch.ArgumentType.STRING, exemptFromNormalization: true},
+            },
+          },
+          {
             opcode: 'tensorShape',
             text: 'shape of tensor [TEN]',
             blockType: Scratch.BlockType.REPORTER,
@@ -180,6 +278,14 @@
               TEN: jwArray.Argument
             },
           },
+          {
+            opcode: 'tensorScalars',
+            text: 'scalars in tensor [TEN]',
+            blockType: Scratch.BlockType.REPORTER,
+            arguments: {
+              TEN: jwArray.Argument
+            },
+          },
           '---',
           {
             opcode: 'tensorSetPath',
@@ -190,7 +296,7 @@
             arguments: {
               PAT: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE},
               TEN: jwArray.Argument,
-              VAL: {type: Scratch.ArgumentType.STRING}
+              VAL: {type: Scratch.ArgumentType.STRING, exemptFromNormalization: true}
             },
           },
           {
@@ -215,6 +321,15 @@
             },
             forceOutputType: "Array",
           },
+          '---',
+          {
+            opcode: 'tensorValid',
+            text: 'is [TEN] a valid tensor?',
+            blockType: Scratch.BlockType.BOOLEAN,
+            arguments: {
+              TEN: {type: Scratch.ArgumentType.STRING}
+            },
+          },
         ],
       };
     }
@@ -235,6 +350,16 @@
       TEN = getTensorPath(TEN, PAT.array)
       return Array.isArray(TEN) ? new jwArray.Type(TEN) : TEN
     }
+    tensorFindPath({ VAL, TEN }) {
+      TEN = jwArray.Type.toArray(TEN);
+      if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
+      return new jwArray.Type(findTensorPath(TEN.array, VAL));
+    }
+    tensorHas({ TEN, VAL }) {
+      TEN = jwArray.Type.toArray(TEN);
+      if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
+      return tensorContains(TEN, VAL)
+    }
     tensorShape({ TEN }) {
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
@@ -244,6 +369,11 @@
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return '';
       return getTensorRank(TEN.array);
+    }
+    tensorScalars({ TEN }) {
+      TEN = jwArray.Type.toArray(TEN);
+      if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return '';
+      return countScalars(TEN.array);
     }
 
     tensorSetPath({ PAT, TEN, VAL }) {
@@ -262,6 +392,13 @@
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
       return new jwArray.Type(fillTensor(TEN, VAL));
+    }
+
+    tensorValid({ TEN }) {
+      TEN = jwArray.Type.toArray(TEN);
+      const arr = TEN?.array;
+      if (!Array.isArray(arr)) return false;
+      return validTensor(arr);
     }
   }
   
