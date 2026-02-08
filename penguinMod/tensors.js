@@ -197,6 +197,45 @@
     return tensor === target;
   }
 
+  function transposeTensor(t) {
+    while (t instanceof jwArray.Type) t = t.array;
+    if (!validTensor(t)) return [];
+  
+    const shape = getTensorShape(t);
+    const r = shape.length;
+    if (r < 2) return t;
+  
+    const ns = shape.slice().reverse();
+    const idx = new Array(r);
+  
+    function build(d) {
+      const len = ns[d], out = new Array(len);
+  
+      if (d === r - 1) {
+        for (let i = 0; i < len; i++) {
+          idx[d] = i;
+          let cur = t;
+          for (let k = 0; k < r; k++) {
+            while (cur instanceof jwArray.Type) cur = cur.array;
+            cur = cur[idx[r - 1 - k]];
+          }
+          while (cur instanceof jwArray.Type) cur = cur.array;
+          out[i] = cur;
+        }
+      } else {
+        for (let i = 0; i < len; i++) {
+          idx[d] = i;
+          out[i] = build(d + 1);
+        }
+      }
+  
+      return out;
+    }
+  
+    return build(0);
+  }
+
+
 
   class Extension {
     constructor() {
@@ -208,7 +247,7 @@
       return {
         id: "lxTensors",
         name: "Tensors",
-        color1: "#ff4f64",
+        color1: "#fe6743",
         blocks: [
           {
             opcode: 'blank',
@@ -280,7 +319,7 @@
           },
           {
             opcode: 'tensorScalars',
-            text: 'scalars in tensor [TEN]',
+            text: 'size of tensor [TEN]',
             blockType: Scratch.BlockType.REPORTER,
             arguments: {
               TEN: jwArray.Argument
@@ -318,6 +357,16 @@
             arguments: {
               TEN: jwArray.Argument,
               VAL: {type: Scratch.ArgumentType.STRING}
+            },
+            forceOutputType: "Array",
+          },
+          {
+            opcode: 'tensorTranspose',
+            text: 'transpose tensor [TEN]',
+            blockType: Scratch.BlockType.REPORTER,
+            blockShape: Scratch.BlockShape.SQUARE,
+            arguments: {
+              TEN: jwArray.Argument
             },
             forceOutputType: "Array",
           },
@@ -392,6 +441,11 @@
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
       return new jwArray.Type(fillTensor(TEN, VAL));
+    }
+    tensorTranspose({ TEN }) {
+      TEN = jwArray.Type.toArray(TEN);
+      if (TEN.array == null) return new jwArray.Type([], true);
+      return new jwArray.Type(transposeTensor(TEN.array));
     }
 
     tensorValid({ TEN }) {
