@@ -21,6 +21,7 @@
   function getTensorShape(arr) {
     const shape = [];
     arr = u(arr);
+    if (arr.length === 0) return [0];
     let level = arr;
   
     while (true) {
@@ -48,13 +49,8 @@
     return shape;
   }
 
-  function getTensorRank(tensor) {
-    tensor = u(tensor);
-    if (!Array.isArray(tensor)) return 0;
-    return 1 + getTensorRank(tensor[0]);
-  }
-
   function reshapeTensor(tensor, shape) {
+    if (shape.some(el => typeof el !== 'number' || isNaN(el) || el <= 0)) return [];
     const flat = tensor.flat(Infinity).array;
 
     let size = 1;
@@ -119,30 +115,6 @@
     return out === undefined ? '' : new jwArray.Type(out);
   }
 
-  function validTensor(arr) {
-    let level = u(arr);
-    if (!Array.isArray(level)) return false;
-  
-    while (true) {
-      const len = level.length;
-      if (len === 0) return false;
-  
-      let first = level[0];
-      const firstIsArray = Array.isArray(first);
-      const expectedLen = firstIsArray ? first.length : 0;
-  
-      for (let i = 1; i < len; i++) {
-        let item = level[i];
-        const isArr = Array.isArray(item);
-        if (isArr !== firstIsArray) return false;
-        if (isArr && item.length !== expectedLen) return false;
-      }
-  
-      if (!firstIsArray) return true;
-      level = first;
-    }
-  }
-
   function countScalars(t) {
     t = u(t)
     function f(n) {
@@ -194,9 +166,9 @@
 
   function transposeTensor(t) {
     t = u(t);
-    if (!validTensor(t)) return [];
   
     const shape = getTensorShape(t);
+    if (!(Array.isArray(shape) && shape.length >= 1)) return [];
     const r = shape.length;
     if (r < 2) return t;
   
@@ -404,18 +376,18 @@
     }
     tensorShape({ TEN }) {
       TEN = jwArray.Type.toArray(TEN);
-      if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
+      if (TEN.array == null) return new jwArray.Type([], true);
       return new jwArray.Type(getTensorShape(TEN));
     }
     tensorRank({ TEN }) {
       TEN = jwArray.Type.toArray(TEN);
-      if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return '';
-      return getTensorRank(TEN);
+      if (TEN.array == null) return '';
+      return getTensorShape(TEN).length;
     }
     tensorScalars({ TEN }) {
       TEN = jwArray.Type.toArray(TEN);
-      if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return '';
-      return countScalars(TEN);
+      if (TEN.array == null) return '';
+      return getTensorShape(TEN).reduce((a, b) => a*b, 1);
     }
 
     tensorSetPath({ PAT, TEN, VAL }) {
@@ -445,7 +417,8 @@
       TEN = jwArray.Type.toArray(TEN);
       const arr = TEN?.array;
       if (!Array.isArray(arr)) return false;
-      return validTensor(arr);
+      TEN = getTensorShape(TEN)
+      return (Array.isArray(TEN) && TEN.length >= 1);
     }
   }
   
