@@ -20,7 +20,6 @@
 
   function getTensorShape(arr) {
     const shape = [];
-    arr = u(arr);
     if (arr.length === 0) return [0];
     let level = arr;
   
@@ -51,7 +50,7 @@
 
   function reshapeTensor(tensor, shape) {
     if (shape.some(el => typeof el !== 'number' || isNaN(el) || el <= 0)) return [];
-    const flat = tensor.flat(Infinity).array;
+    const flat = tensor.flat(Infinity);
 
     let size = 1;
     for (let i = 0; i < shape.length; i++) size *= shape[i];
@@ -74,13 +73,11 @@
   }
 
   function fillTensor(tensor, val) {
-    tensor = u(tensor);  
     if (!Array.isArray(tensor)) return val;  
     return tensor.map(el => fillTensor(el, val));
   }
 
   function getTensorPath(tensor, path) {
-    tensor = u(tensor);
     let current = tensor;
   
     for (let i = 0, len = path.length; i < len; i++) {
@@ -93,7 +90,6 @@
   }
 
   function setTensorPath(tensor, path, value) {
-    tensor = u(tensor);
     function f(a, d) {
       if (!Array.isArray(a)) return;
       const i = path[d] - 1;
@@ -116,7 +112,6 @@
   }
 
   function countScalars(t) {
-    t = u(t)
     function f(n) {
       if (!Array.isArray(n)) return 1;
   
@@ -131,9 +126,6 @@
   }
 
   function findTensorPath(tensor, target) {
-    console.log(tensor);
-    tensor = u(tensor);
-    console.log(tensor);
     const stack = [{ node: tensor, path: [] }];
   
     while (stack.length) {
@@ -154,7 +146,6 @@
   }
 
   function tensorContains(tensor, target) {
-    tensor = u(tensor);
     if (Array.isArray(tensor)) {
       for (let i = 0; i < tensor.length; i++) {
         if (tensorContains(tensor[i], target)) return true;
@@ -165,8 +156,6 @@
   }
 
   function transposeTensor(t) {
-    t = u(t);
-  
     const shape = getTensorShape(t);
     if (!(Array.isArray(shape) && shape.length >= 1)) return [];
     const r = shape.length;
@@ -199,9 +188,7 @@
   
     return build(0);
   }
-
-
-
+  
   class Extension {
     constructor() {
       if (!vm.jwArray) vm.extensionManager.loadExtensionIdSync('jwArray')
@@ -217,20 +204,15 @@
           {
             opcode: 'blank',
             text: 'blank tensor',
-            blockType: Scratch.BlockType.REPORTER,
-            blockShape: Scratch.BlockShape.SQUARE,
-            forceOutputType: "Array",
-            disableMonitor: true,
+            ...jwArray.Block
           },
           {
             opcode: 'blankSize',
             text: 'blank tensor of shape [SHA]',
-            blockType: Scratch.BlockType.REPORTER,
-            blockShape: Scratch.BlockShape.SQUARE,
             arguments: {
               SHA: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE},
             },
-            forceOutputType: "Array",
+            ...jwArray.Block
           },
           '---',
           {
@@ -246,14 +228,12 @@
           {
             opcode: 'tensorFindPath',
             text: 'path of [VAL] in tensor [TEN]',
-            blockType: Scratch.BlockType.REPORTER,
-            blockShape: Scratch.BlockShape.SQUARE,
             allowDropAnywhere: true,
             arguments: {
               VAL: {type: Scratch.ArgumentType.STRING, exemptFromNormalization: true},
               TEN: jwArray.Argument
             },
-            forceOutputType: "Array",
+            ...jwArray.Block
           },
           {
             opcode: 'tensorHas',
@@ -267,12 +247,10 @@
           {
             opcode: 'tensorShape',
             text: 'shape of tensor [TEN]',
-            blockType: Scratch.BlockType.REPORTER,
-            blockShape: Scratch.BlockShape.SQUARE,
             arguments: {
               TEN: jwArray.Argument
             },
-            forceOutputType: "Array",
+            ...jwArray.Block
           },
           {
             opcode: 'tensorRank',
@@ -294,46 +272,38 @@
           {
             opcode: 'tensorSetPath',
             text: 'set path [PAT] in tensor [TEN] to [VAL]',
-            blockType: Scratch.BlockType.REPORTER,
-            blockShape: Scratch.BlockShape.SQUARE,
-            allowDropAnywhere: true,
             arguments: {
               PAT: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE},
               TEN: jwArray.Argument,
               VAL: {type: Scratch.ArgumentType.STRING, exemptFromNormalization: true}
             },
+            ...jwArray.Block
           },
           {
             opcode: 'tensorReshape',
             text: 'reshape tensor [TEN] to shape [SHA]',
-            blockType: Scratch.BlockType.REPORTER,
-            blockShape: Scratch.BlockShape.SQUARE,
             arguments: {
               TEN: jwArray.Argument,
               SHA: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE},
             },
-            forceOutputType: "Array",
+            ...jwArray.Block
           },
           {
             opcode: 'tensorFill',
             text: 'fill tensor [TEN] with [VAL]',
-            blockType: Scratch.BlockType.REPORTER,
-            blockShape: Scratch.BlockShape.SQUARE,
             arguments: {
               TEN: jwArray.Argument,
               VAL: {type: Scratch.ArgumentType.STRING, exemptFromNormalization: true}
             },
-            forceOutputType: "Array",
+            ...jwArray.Block
           },
           {
             opcode: 'tensorTranspose',
             text: 'transpose tensor [TEN]',
-            blockType: Scratch.BlockType.REPORTER,
-            blockShape: Scratch.BlockShape.SQUARE,
             arguments: {
               TEN: jwArray.Argument
             },
-            forceOutputType: "Array",
+            ...jwArray.Block
           },
           '---',
           {
@@ -361,63 +331,63 @@
       TEN = jwArray.Type.toArray(TEN);
       PAT = jwArray.Type.toArray(PAT);
       if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
-      TEN = getTensorPath(TEN, PAT.array)
+      TEN = getTensorPath(u(TEN), PAT.array)
       return Array.isArray(TEN) ? new jwArray.Type(TEN) : TEN
     }
     tensorFindPath({ VAL, TEN }) {
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
-      return new jwArray.Type(findTensorPath(TEN, VAL));
+      return new jwArray.Type(findTensorPath(u(TEN), VAL));
     }
     tensorHas({ TEN, VAL }) {
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
-      return tensorContains(TEN, VAL)
+      return tensorContains(u(TEN), VAL)
     }
     tensorShape({ TEN }) {
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null) return new jwArray.Type([], true);
-      return new jwArray.Type(getTensorShape(TEN));
+      return new jwArray.Type(getTensorShape(u(TEN)));
     }
     tensorRank({ TEN }) {
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null) return '';
-      return getTensorShape(TEN).length;
+      return getTensorShape(u(TEN)).length;
     }
     tensorScalars({ TEN }) {
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null) return '';
-      return getTensorShape(TEN).reduce((a, b) => a*b, 1);
+      return getTensorShape(u(TEN)).reduce((a, b) => a*b, 1);
     }
 
     tensorSetPath({ PAT, TEN, VAL }) {
       TEN = jwArray.Type.toArray(TEN);
       PAT = jwArray.Type.toArray(PAT);
       if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
-      return setTensorPath(TEN, PAT.array, VAL)
+      return setTensorPath(u(TEN), PAT.array, VAL)
     }
     tensorReshape({ TEN, SHA }) {
       TEN = jwArray.Type.toArray(TEN);
       SHA = jwArray.Type.toArray(SHA);
       if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
-      return new jwArray.Type(reshapeTensor(TEN, SHA.array));
+      return new jwArray.Type(reshapeTensor(u(TEN), SHA.array));
     }
     tensorFill({ TEN, VAL }) {
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null || (Array.isArray(TEN.array) && TEN.array.length === 0)) return new jwArray.Type([], true);
-      return new jwArray.Type(fillTensor(TEN, VAL));
+      return new jwArray.Type(fillTensor(u(TEN), VAL));
     }
     tensorTranspose({ TEN }) {
       TEN = jwArray.Type.toArray(TEN);
       if (TEN.array == null) return new jwArray.Type([], true);
-      return new jwArray.Type(transposeTensor(TEN));
+      return new jwArray.Type(transposeTensor(u(TEN)));
     }
 
     tensorValid({ TEN }) {
       TEN = jwArray.Type.toArray(TEN);
       const arr = TEN?.array;
       if (!Array.isArray(arr)) return false;
-      TEN = getTensorShape(TEN)
+      TEN = getTensorShape(u(TEN))
       return (Array.isArray(TEN) && TEN.length >= 1);
     }
   }
