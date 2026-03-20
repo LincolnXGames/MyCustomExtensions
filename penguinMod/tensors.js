@@ -200,6 +200,7 @@
         id: "lxTensors",
         name: "Tensors",
         color1: "#fe6743",
+        menuIconURI: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCI+PGNpcmNsZSBjeD0iMTAiIGN5PSIxMCIgcj0iOSIgc3R5bGU9InN0cm9rZS13aWR0aDoycHg7cGFpbnQtb3JkZXI6c3Ryb2tlO2ZpbGw6I2ZlNjc0MztzdHJva2U6I2NkM2IyYztmaWxsLXJ1bGU6bm9uemVybztmaWxsLW9wYWNpdHk6MSIvPjxwYXRoIGQ9Ik03LjcyNyA2Ljg0MmExLjMxIDEuMzEgMCAwIDAtMS4zMDUgMS4zMDR2My43MDhjMCAuNzE2LjU5IDEuMzA0IDEuMzA1IDEuMzA0SDkuMDN2LTEuNjgzaC0uOTI3di0yLjk1aC45MjdWNi44NDJabTMuMjQyIDB2MS42ODNoLjkyN3YyLjk1aC0uOTI3djEuNjgzaDEuMzA0YTEuMzEgMS4zMSAwIDAgMCAxLjMwNS0xLjMwNFY4LjE0NmExLjMxIDEuMzEgMCAwIDAtMS4zMDUtMS4zMDR6IiBzdHlsZT0iYmFzZWxpbmUtc2hpZnQ6YmFzZWxpbmU7ZGlzcGxheTppbmxpbmU7b3ZlcmZsb3c6dmlzaWJsZTtvcGFjaXR5OjE7dmVjdG9yLWVmZmVjdDpub25lO2ZpbGw6I2ZmZjtzdG9wLWNvbG9yOiMwMDA7c3RvcC1vcGFjaXR5OjEiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJNNy4yMzggNC4yMkg1LjMxMmExLjkyNyAxLjkyNyAwIDAgMC0xLjkyNyAxLjkyN3Y3LjcwNmMwIDEuMDY2Ljg2MyAxLjkyNyAxLjkyNyAxLjkyN2gxLjkyNnYtMS45MjdINS4zMTJWNi4xNDdoMS45MjZ6bTUuNTI0IDkuNjMzaDEuOTI2VjYuMTQ3aC0xLjkyNlY0LjIyaDEuOTI2YzEuMDY0IDAgMS45MjcuODYzIDEuOTI3IDEuOTI3djcuNzA2YTEuOTI2IDEuOTI2IDAgMCAxLTEuOTI3IDEuOTI3aC0xLjkyNnoiLz48L3N2Zz4=",
         blocks: [
           {
             opcode: 'blank',
@@ -384,6 +385,7 @@
     }
 
     tensorValid({ TEN }) {
+      if (TEN == "" || TEN == null) return false;
       TEN = jwArray.Type.toArray(TEN);
       const arr = TEN?.array;
       if (!Array.isArray(arr)) return false;
