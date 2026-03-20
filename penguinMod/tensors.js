@@ -210,7 +210,7 @@
             opcode: 'blankSize',
             text: 'blank tensor of shape [SHA]',
             arguments: {
-              SHA: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE},
+              SHA: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE, defaultValue: "[1, 2, 3]"},
             },
             ...jwArray.Block
           },
@@ -221,7 +221,7 @@
             blockType: Scratch.BlockType.REPORTER,
             allowDropAnywhere: true,
             arguments: {
-              PAT: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE},
+              PAT: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE, defaultValue: "[1, 2, 3]"},
               TEN: jwArray.Argument
             },
           },
@@ -230,7 +230,7 @@
             text: 'path of [VAL] in tensor [TEN]',
             allowDropAnywhere: true,
             arguments: {
-              VAL: {type: Scratch.ArgumentType.STRING, exemptFromNormalization: true},
+              VAL: {type: Scratch.ArgumentType.STRING, exemptFromNormalization: true, defaultValue: "foo"},
               TEN: jwArray.Argument
             },
             ...jwArray.Block
@@ -273,9 +273,9 @@
             opcode: 'tensorSetPath',
             text: 'set path [PAT] in tensor [TEN] to [VAL]',
             arguments: {
-              PAT: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE},
+              PAT: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE, defaultValue: "[1, 2, 3]"},
               TEN: jwArray.Argument,
-              VAL: {type: Scratch.ArgumentType.STRING, exemptFromNormalization: true}
+              VAL: {type: Scratch.ArgumentType.STRING, exemptFromNormalization: true, defaultValue: "foo"}
             },
             ...jwArray.Block
           },
@@ -284,7 +284,7 @@
             text: 'reshape tensor [TEN] to shape [SHA]',
             arguments: {
               TEN: jwArray.Argument,
-              SHA: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE},
+              SHA: {type: Scratch.ArgumentType.STRING, shape: Scratch.BlockShape.SQUARE, defaultValue: "[1, 2, 3]"},
             },
             ...jwArray.Block
           },
@@ -293,7 +293,7 @@
             text: 'fill tensor [TEN] with [VAL]',
             arguments: {
               TEN: jwArray.Argument,
-              VAL: {type: Scratch.ArgumentType.STRING, exemptFromNormalization: true}
+              VAL: {type: Scratch.ArgumentType.STRING, exemptFromNormalization: true, defaultValue: "foo"}
             },
             ...jwArray.Block
           },
